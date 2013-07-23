@@ -1,0 +1,148 @@
+<html> <head> <title>HTML Canvas Deep Dive, 2013</title> 
+	<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+	<h1>HTML Canvas Deep Dive</h1> <h2>2013 Edition: Games</h2>
+
+	<p>Games account for about half of the apps in the typical app
+store. They are among the first thing ported to any new platform.
+Games help drive technology forward.  This year's edition of the
+popular HTML Canvas Deep Dive will focus specifically on building
+cross platform games for mobile and desktop. We will cover everything
+needed to build basic games with animation, scrolling, sound effects
+and music, image loading, sprites, and even joystick support. Then we
+will learn how to package them to run on desktop and mobile devices,
+both in and outside of app stores.</p>
+
+
+<h3>Welcome</h3>
+
+<p> Hi Welcome to HTML Canvas Deep Dive. This is the third year I've done the
+talk and I think it will be our most exciting one yet. The problem with HTML is
+that it keeps getting bigger. The technology grows to encompass more things.
+First it was simple 2d, then 3d, now audio, camera input, and even joysticks.
+And this is just the media related technologies. I haven't even touched on
+networking and intensive processing. And they are all needed to get the most out
+of Canvas. Fortunately, every year I record the new material in my free online
+book at my website. This means you can still learn the things we don't have
+enough time to cover here. So after this workshop please check it out. The
+resources you will need for today's hands on workshop are available here.</p>
+
+
+<h2><a href='http://joshondesign.com/p/books/draft/canvas2013.html'
+>http://joshondesign.com/p/books/draft/canvas2013.html</a></h2>
+<h2><a href='http://joshondesign.com/p/books/canvas2013.zip'
+>http://joshondesign.com/p/books/canvas2013.zip</a></h2>
+
+
+<h3>A bit about me</h3>
+
+<h4>Josh Marinacci</h4>
+<h2>JoshOnDesign.com</h2>
+<h4>@joshmarinacci</h4>
+<h4>Researcher, Nokia</h4>
+<h4>webOS DevRel @ Palm</h4>
+<h4>GUI Engineer @ Sun</h4>
+<h4>O'Reilly Author: Swing Hacks, Mobile apps in Java w/ GWT and Phonegap</h4>
+
+<h3>Why make games?</h3>
+
+<p>	Since we can't cover everything, this year I decided to focus on
+one area: games.  Games are a great way to learn the HTML Canvas
+technologies because they touch on everything: graphics, sound,
+performance tuning, and mobile support.  If you can do it with a
+game, then chances are you can do it in something else.</p>
+
+
+<h3>What is Canvas?</h3>
+
+
+<p>	But before we dive into games, just what is HTML Canvas?</p>
+
+
+<p>	Canvas is a part of HTML 5, or now just HTML. It's an HTML
+    element which is essentially just a box in the page that you can draw
+    into with JavaScript. You can draw lines, shapes, images, and text. 
+    And in most cases it is now hardware accelerated, so drawing is very
+    fast, at least on desktops.</p>
+
+
+<p>	Since Canvas is a pretty well polished HTML standard it is now
+supported by every major browser, even IE. In fact, IE 10 for desktop
+has blisteringly good performance on Windows 7 and 8.  Canvas is also
+supported in virtually every smart phone browser, though it's not as
+fast as on desktop.</p>
+
+
+<h3>2D vs 3D</h3>
+
+
+<p>	Canvas is mainly for 2D bitmap graphics. However there is also a 3D
+version of Canvas which goes by the name WebGL. As you might guess
+from the name, it is essentially OpenGL running in your browser. This
+makes it very fast but very tricky to program, as you are essentially
+writing C and shader code in JavaScript. Most people don't code WebGL
+by hand. They use a helper library like <a href='http://threejs.org/'>three.js</a>.  In the interest of
+time we won't cover WebGL today, but there is a section of the online book
+which walks you through creating a scene and loading up a 3d model.
+</p>
+
+
+
+
+<h3>Intro to Canvas</h3>
+
+
+<p>	Before we start designing our game, lets look at a bit of canvas
+code.</p>
+
+
+<p><i>Follow these examples from chapter 1.</i></p>
+
+<h3><a target='_blank' href='http://joshondesign.com/p/books/canvasdeepdive/chapter01.html#simple_drawing'>Simple Canvas Examples</a></h3>
+
+<p>	The ebook has more in-depth examples showing how to build bar and
+pie charts.</p>
+
+<h3><a target='_blank' href='http://joshondesign.com/p/books/canvasdeepdive/chapter02.html'>Bar and Pie Charts, Hands On Example</a></h3>
+
+
+<h3>Why make games in canvas?</h3>
+
+<p>Now that we know what Canvas is, why should we make games using
+it instead of some other technology like C++ or Java?  Probably the
+most compelling reason is that it's a standard and it runs
+everywhere.  Virtually every platform has some form of Canvas
+support. While it's not as fast as native systems, there are some big
+resources at Apple, Google, Microsoft, and other places that are
+working very hard to make it faster and faster.  I also think Canvas
+is great because you can code in JavaScript instead of C++. Again
+while it's not as fast to run, it's usually fast enough and the
+coding experience is so much better. I can whip up something in 30
+minutes with Javascript that would take me hours in C++.</p>
+
+<p>	It's also important to mention that Canvas is an open standard. 
+Not only does it mean that different platforms support the same
+features (roughly), because it is open you can implement it on new
+platforms as they come along.  This gives Canvas a great future.</p>
+
+<h2><a href='lecture1.html'>Lecture 1: Game Loop</a></h2>
+<h2><a href='handson1.html'>Game Loop Hands On</a></h2>
+<h2><a href='lecture2.html'>Lecture 2: Audio</a></h2>
+<h2><a href='handson2.html'>Audio Hands On</a></h2>
+<h2><a href='lecture3.html'>Lecture 3: Extras</a></h2>
+
+
+<script type="text/javascript">var _gaq = _gaq || [];
+_gaq.push(['_setAccount', 'UA-9436360-1']);
+_gaq.push(['_trackPageview']);
+
+(function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+})();
+
+</script></body>
+</html>

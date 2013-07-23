@@ -1,0 +1,62 @@
+<html>
+<head>
+</head>
+<body>
+<h3>foo</h3>
+<script type='text/javascript'>
+
+var sin = Math.sin;
+var PI = Math.PI;
+var floor = Math.floor;
+var scale = {
+    C4:261.626,
+    D4:293.665,
+    E4:329.628,
+    F4:349.228,
+    G4:391.995,
+    A4:440.000,
+    B4:493.883,    
+}
+//var notes = [scale.E4, scale.D4, scale.E4, scale.F4];
+var notes = [
+    scale.E4,scale.D4,scale.C4,scale.D4,
+    scale.E4,scale.E4,scale.E4,
+    
+    scale.D4,scale.D4,scale.D4,
+    scale.E4,scale.G4,scale.G4,
+    
+    scale.E4,scale.D4,scale.C4,scale.D4,
+    scale.E4,scale.E4,scale.E4,
+    
+    scale.E4,scale.D4,scale.D4,
+    scale.E4,scale.D4,scale.C4,scale.C4,
+    ];
+
+//var noteLen = 0.2;
+var noteLen = 0.7;
+function note(t) {
+    var cur = (floor(t/noteLen) % notes.length);
+    return notes[cur];
+}
+function tone(t,freq) { 
+    return sin(t*2*PI*freq);
+}
+function music(t) {
+    var freq = note(t);
+    return tone(t, freq);
+}
+
+var ctx = new webkitAudioContext();
+var jsnode = ctx.createScriptProcessor(512,0,1);
+var t = 0;
+jsnode.onaudioprocess = function(e) {
+    var output = e.outputBuffer.getChannelData(0);
+    for (var i = 0; i < output.length; i++) {
+        output[i] = music(t);
+        t += 1/44000.0;
+    }
+}
+jsnode.connect(ctx.destination);
+</script>
+</body>
+</html>

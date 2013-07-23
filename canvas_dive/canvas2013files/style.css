@@ -1,0 +1,17 @@
+body {
+    background-color: #f9f9f9;
+    font-family: sans-serif;
+    padding: 2em;
+    line-height: 1.5em;
+}
+h3 {
+    padding-top: 3em;
+}
+pre{
+    padding: 1em;
+    background-color: #f9f9da;
+    border: 1px solid brown;
+}
+.thumbnail {
+    border: 1px solid black;
+}

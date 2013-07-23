@@ -1,0 +1,86 @@
+<html>
+<body>
+<canvas id='canvas' width='800' height='600'></canvas>
+<script type='text/javascript'>
+var pressed = {};
+var player = new Box(0,0,50,100);
+var ctx = document.getElementById('canvas').getContext('2d');
+function setup() {
+    document.addEventListener('keydown',function(e) { 
+        pressed[e.keyCode] = true;   
+    });
+    document.addEventListener('keyup',  function(e) {  
+        pressed[e.keyCode] = false;  
+    });
+}
+
+function gameLoop() {
+    processInput();
+    updateGameState();
+    checkConditions();
+    processAnimations();
+    draw();
+    refresh();
+}
+function processInput() {
+    if(pressed['J'.charCodeAt(0)] == true) {
+        player.x -= 3;
+    }
+    if(pressed['L'.charCodeAt(0)] == true) {
+        player.x += 3;
+    }
+}
+function updateGameState() {
+}
+function checkConditions() {
+}
+function processAnimations() {
+}
+function draw() {
+    ctx.fillStyle = "white";
+    ctx.fillRect(0,0,800,600);
+    ctx.fillStyle = "red";
+    player.fillRect(ctx);
+}
+function refresh() {
+}
+
+
+
+
+function Box(x,y,w,h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.fillRect = function(ctx) {
+        ctx.fillRect(this.x,this.y,this.w,this.h);
+    }
+    this.getRight = function() { return this.x + this.w; }
+    this.getLeft = function() { return this.x; }
+    this.getTop = function() { return this.y; }
+    this.getBottom = function() { return this.y + this.h; }
+    
+    this.setRight  = function(right) { this.x = right - this.w; }
+    this.setLeft   = function(left)  { this.x = left; }
+    this.setBottom = function(bottom) { this.y = bottom - this.h; }
+    this.setTop    = function(top) { this.y = top; }
+    
+    this.intersects = function(box) {
+        if(this.getRight() >= box.getLeft() 
+        && this.getLeft() <= box.getRight()) {
+            if(this.getBottom() >= box.getTop() 
+            && this.getTop() <= box.getBottom()) {
+                    return true;
+            }
+  		}	
+  		return false;    	
+    }
+}
+
+setup();
+setInterval(gameLoop,100);
+</script>
+
+</body>
+</html>

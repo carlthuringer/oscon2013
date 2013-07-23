@@ -1,0 +1,752 @@
+<html>
+<head>
+    <title>Ninja Cat</title>
+    <meta name = 'viewport' content = 'user-scalable=no, width=device-width, initial-scale=1.0'>
+    <!--<meta name = 'viewport' content = 'width=device-width, initial-scale=1.0'>-->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="apple-touch-icon" sizes="72x72" href="icon-ipad.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="icon-ipad-retina.png" />
+    
+    <link href='http://fonts.googleapis.com/css?family=Fredoka+One' rel='stylesheet' type='text/css'>
+    
+    
+    <style type='text/css'>
+        html, body, canvas {
+            border: 0; margin: 0; padding:0;
+            background-color: black;
+        }
+        canvas {
+            width: 100%;
+        }
+    </style>
+</head>
+<body><canvas id='canvas' width='960' height='600'></canvas><script type='text/javascript'>
+
+var debugString = "foo";
+function drawDebug(ctx) {
+    ctx.fillStyle = "white";
+    ctx.fillText(debugString,10,500);
+}
+function sp(o) {
+    if(o) {
+        debugString = o.toString();
+    }
+    if(o.length) {
+        debugString = "";
+        for(var i in o) {
+            debugString += "   " + o[i];
+        }
+    }
+}
+
+var dirStartID = -1;
+var jumpID = -1;
+var dirStartX = 0;
+var dirEndX = 0;
+document.ontouchstart = function(e){ 
+    e.preventDefault(); //disable default scrolling
+    var touch = e.changedTouches[0]
+    if(touch.clientX < 500) {
+        dirStartX = touch.clientX;
+        dirStartID = touch.identifier;
+    }
+    if(touch.clientX > 500) {
+        state.jump = true;
+        jumpID = touch.identifier;
+    }
+}
+
+document.ontouchmove = function(e) {
+    if(e.changedTouches[0].identifier == dirStartID) {
+        dirEndX = e.changedTouches[0].clientX;
+        var diff = dirEndX-dirStartX;
+        if(Math.abs(diff) > 30) {
+            if(diff < 0) state.left = true;
+            if(diff > 0) state.right = true;
+        } else {
+            state.left = false;
+            state.right = false;
+        }
+    }
+}
+
+document.ontouchend = function(e) {
+    for(var i=0; i<e.changedTouches.length; i++) {
+        checkLeftRightTouch(e.changedTouches[i]);
+        checkJumpTouch(e.changedTouches[i]);
+    }
+}
+
+function checkLeftRightTouch(touch) {
+    if(touch.identifier == dirStartID) {
+        state.left = false;
+        state.right = false;
+        dirStartID = -1;
+    }
+}
+
+function checkJumpTouch(touch) {
+    if(touch.identifier == jumpID) {
+        state.jump = false;
+        jumpID = -1;
+    }
+}
+
+var pressed = {};
+var player = new Box(0,300,50,100);
+var ctx = document.getElementById('canvas').getContext('2d');
+var monolith = new Box(300,200,50,200);
+var effects = [];
+var ground = 400;
+var camera = 0;
+
+var enemies = [];
+
+var catAnim = {
+    sprite: new Image(),
+};
+catAnim.sprite.src = "kitty.png";
+
+var anims = {
+    monster3: {},
+    monster4: {},
+}
+var skyline1 = [];
+
+function setup() {
+    document.addEventListener('keydown',function(e) { pressed[e.keyCode] = true;  });
+    document.addEventListener('keyup',  function(e) { pressed[e.keyCode] = false; });
+    player.dy = 0;
+    
+    for(var i=0; i<100; i++) {
+        skyline1[i] = rand(50,200);
+    }
+    
+    catAnim.idle = [];
+    for(var i=0; i<4; i++) {
+        catAnim.idle.push({x:i*64, y:0});
+    }
+    
+    catAnim.punch = [];
+    for(var i=0; i<10; i++) {
+        catAnim.punch.push({x:i*64, y:576});
+    }
+       
+    catAnim.walking = [];
+    for(var i=0; i<8; i++) {
+        catAnim.walking.push({x:i*64, y:64});
+    }
+    catAnim.jumping = [];
+    for(var i=0; i<8; i++) {
+        catAnim.jumping.push({x:i*64, y:128});
+    }
+    
+    catAnim.index = 0;
+    catAnim.name = "idle";
+    
+    anims.monster3.sprite = new Image();
+    anims.monster3.sprite.src = "monster3.png";
+    anims.monster3.faceLeft = false;
+    anims.monster3.idle = [];
+    for(var i=0; i<5; i++) {
+        anims.monster3.idle.push({x:i*64, y:0});
+    }
+    anims.monster3.death = [];
+    for(var i=0; i<8; i++) {
+        anims.monster3.death.push({x:i*64, y:64*2});
+    }
+
+    anims.monster4.sprite = new Image();
+    anims.monster4.sprite.src = "monster4.png";
+    anims.monster4.faceLeft = true;
+    anims.monster4.idle = [];
+    for(var i=0; i<4; i++) {
+        anims.monster4.idle.push({x:i*64, y:0});
+    }
+    anims.monster4.jump = [];
+    for(var i=0; i<9; i++) {
+        anims.monster4.jump.push({x:i*64, y:64});
+    }
+    anims.monster4.death = [];
+    for(var i=0; i<8; i++) {
+        anims.monster4.death.push({x:i*64, y:64*4});
+    }
+    
+    var en1 = new Box(600,300,64,64);
+    var en2 = new Box(900,300,64,64);
+    enemies.push(en1);
+    enemies.push(en2);
+    
+    enemies.forEach(function(en) {
+        en.alive = true;
+        en.animName = "idle";
+        en.animIndex = 0;
+    });
+    
+    enemies[0].anim = anims.monster4;
+    enemies[1].anim = anims.monster3;
+}
+
+var jumpImpulse = -15;
+var gravity = 0.5;
+
+
+var state = {
+    left:false,
+    right:false,
+    punch:false,
+    jump:false,
+    
+    lives: 3,
+    
+    screen:"start", //or playing or gameover
+}
+function gameLoop() {
+    processInput();
+    updateGameState();
+    checkConditions();
+    processAnimations();
+    draw();
+    window.requestAnimFrame(gameLoop);
+}
+var doonce = true;
+var jumping = false;
+
+function dojump() {
+    if(state.jump) {
+        if(!jumping) {
+            player.dy = jumpImpulse;
+            jumping = true;
+        } else {
+            jumping = false;
+            state.jump = false;
+        }
+    }
+}
+
+
+function processInput() {
+    state.left = false;
+    state.right = false;
+    state.punch = false;
+    
+    var gamepadSupportAvailable = !!navigator.webkitGetGamepads || !!navigator.webkitGamepads;
+    if(!gamepadSupportAvailable) return;
+    var gamepads = navigator.webkitGetGamepads();
+
+    var pad = gamepads[0];
+    if(pad) {
+        var xoff = pad.axes[0];
+        var yoff = pad.axes[1];
+        var punch = pad.buttons[0];
+        var jump = pad.buttons[1];
+        if(xoff < -0.5) player.x -= 4;
+        if(xoff >  0.5) player.x += 4;
+        if(jump == 1) dojump();
+    }
+    
+    if(pressed['J'.charCodeAt(0)] == true) state.left = true;
+    if(pressed[37] == true) state.left = true;
+    if(pressed['L'.charCodeAt(0)] == true) state.right = true;
+    if(pressed[39] == true) state.right = true;
+    if(pressed[' '.charCodeAt(0)] == true) state.jump = true;
+    if(pressed['K'.charCodeAt(0)] == true) state.punch = true;
+    
+    
+    if(state.screen == "start") {
+        if(state.left || state.right || state.punch || state.jump) {
+            state.screen = "play";
+        }
+    }
+}
+
+function updateGameState() {
+    catAnim.name = "idle";
+    
+    dojump();
+    
+    if(state.left) {
+        player.x -= 4;
+        catAnim.name = "walking";
+    }
+    
+    if(state.right) {
+        player.x += 4;
+        catAnim.name = "walking";
+    }
+    
+    if(player.getBottom() < ground) {
+        catAnim.name = "jumping";
+    }    
+
+    if(state.punch) {
+        catAnim.name = "punch";
+    }
+    
+    player.y += player.dy;
+    player.dy += gravity;
+    
+    camera = player.x - 200;
+    
+    
+    enemies.forEach(function(en) {
+        if(player.getRight() < en.getLeft()) {
+            en.faceLeft = true;
+        } else {
+            en.faceLeft = false;
+        }
+    });
+    
+    if(state.punch) {
+        enemies.forEach(function(en) {
+            if(player.getRight() > en.getLeft()-50) {
+                en.animName = "death";
+                en.dying = true;
+                en.animIndex = 0;
+            }
+        });
+    }
+}
+
+function createDeathEffect(x,y) {
+    var effect = new ParticleEffect();
+    effect.x = x;
+    effect.y = y;
+    effect.max = 100;
+    effect.initParticle = function(part) {
+        part.dy = rand(-5,5);
+        part.dx = rand(-3,0);
+        part.color = randColor();
+        return part;
+    };
+    effects.push(effect);
+}
+
+function killPlayer() {
+    player.x = 0;
+    //deduct one life
+    state.lives--;
+    if(state.lives == 0) {
+        state.screen = "start";
+        state.lives = 3;
+    }
+}
+
+function checkConditions() {
+    if(player.intersects(monolith)) {
+        createDeathEffect(player.x,400-player.h/2);        
+        killPlayer();
+        //move the player back to the start
+    }
+    
+    enemies.forEach(function(en) {
+        if(en.alive && player.intersects(en)) {
+            createDeathEffect(player.x,400-player.h/2);        
+            killPlayer();
+        }
+    });
+    
+    if(player.getBottom() > ground) {
+        player.dy = 0;
+        player.setBottom(ground);
+    }
+    
+    enemies.forEach(function(en) {
+    });
+}
+
+var tick = 0;
+function processAnimations() {
+
+    tick++;
+    
+    if(tick % 6 == 0) {
+        catAnim.index++;
+        enemies.forEach(function(en) {
+            updateSpriteAnim(en);
+        });
+    }
+    if(catAnim.index >= catAnim[catAnim.name].length) {
+        catAnim.index = 0;
+    }
+}
+
+function updateSpriteAnim(box) {
+    box.animIndex++;
+    
+    
+    if(box.animIndex >= box.anim[box.animName].length) {
+        if(box.dying) {
+            box.alive = false;
+        }
+        box.animIndex = 0;
+    }
+}
+
+
+function draw() {
+    drawBackground(ctx);
+    drawSkyline(ctx);
+    drawGround(ctx);
+    ctx.save();
+    ctx.translate(-camera,0);
+    drawPlayer(ctx);
+    drawMonoliths(ctx);
+    drawEffects(ctx);
+    ctx.restore();
+    drawOverlay(ctx);
+    //drawDebug(ctx);
+}
+function drawBackground(ctx) {
+    //background / sky
+    ctx.fillStyle = "#202020";
+    ctx.fillRect(0,0,960,600);
+}
+
+function drawOverlay(ctx) {
+    ctx.font = "normal 36pt 'Fredoka One' ";
+    ctx.fillStyle = "white";
+    ctx.fillText("life: " + state.lives, 20, 60);
+    
+    ctx.font = "normal 25pt 'Fredoka One' ";
+    ctx.fillText("j = left, k = punch, l = right, space = jump", 20, 570);
+    
+    if(state.screen == "start") {
+        ctx.save();
+        ctx.translate(-25,-50);
+        ctx.fillStyle = "#882222";
+        ctx.globalAlpha = 0.9;
+        ctx.fillRect(200,200,650,150);
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = "white";
+        ctx.font = "normal 56pt 'Fredoka One' ";
+        ctx.fillText("Insert Quarter",270,300);
+        ctx.restore();
+    }
+}
+
+function drawSkyline(ctx) {
+    ctx.save();
+    ctx.translate(-camera/2, 0);
+    ctx.fillStyle = "#442222";
+    for(var i in skyline1) {
+        var h = skyline1[i];
+        ctx.fillRect(i*50, ground - h, 51, h);
+    }
+    
+    ctx.restore();
+}
+function drawGround(ctx) {
+    ctx.fillStyle = "#449922";
+    ctx.fillRect(0,400,960,200);
+}
+function drawPlayer(ctx) {
+    //player
+    ctx.fillStyle = "red";
+    //player.fillRect(ctx);
+    
+    ctx.save();
+	ctx.translate(player.x,player.y);
+    var slice = catAnim[catAnim.name][catAnim.index];
+    ctx.imageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+	ctx.drawImage(catAnim.sprite,
+	    slice.x,slice.y,64,64, //src
+	    -64-32,-64-32-20,128*2,128*2 //dst
+	    );
+   
+	ctx.restore();
+    
+    //monolith
+}
+
+function drawSprite(ctx, box) {
+    ctx.save();
+    ctx.translate(box.x,box.y);
+    var slice = box.anim[box.animName][box.animIndex];
+    ctx.imageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    var fliph = false;
+    if(!box.anim.faceLeft) {
+        fliph = !fliph;
+    }
+    if(!box.faceLeft) {
+        fliph = !fliph;
+    }
+    if(fliph) {
+        ctx.translate(64,0);
+        ctx.scale(-1,1);
+    }
+	ctx.drawImage(box.anim.sprite,
+	    slice.x,slice.y,64,64, //src
+	    -64-32,-64-32-20,128*2,128*2 //dst
+	    );
+   
+    ctx.restore();
+}
+function drawMonoliths(ctx) {
+    ctx.fillStyle = "#f0f0f0";
+    monolith.fillRect(ctx);
+    enemies.forEach(function(en) {
+        if(!en.alive) return;
+        en.fillRect(ctx);
+        drawSprite(ctx, en);
+    });
+}
+function drawEffects(ctx) {
+    //effects    
+    effects.forEach(function(ef) {
+        ef.tick();
+        ef.draw(ctx);
+    });
+}
+
+
+function Box(x,y,w,h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.fillRect = function(ctx) {
+        ctx.fillRect(this.x,this.y,this.w,this.h);
+    }
+    this.getRight = function() { return this.x + this.w; }
+    this.getLeft = function() { return this.x; }
+    this.getTop = function() { return this.y; }
+    this.getBottom = function() { return this.y + this.h; }
+    
+    this.setRight  = function(right) { this.x = right - this.w; }
+    this.setLeft   = function(left)  { this.x = left; }
+    this.setBottom = function(bottom) { this.y = bottom - this.h; }
+    this.setTop    = function(top) { this.y = top; }
+    
+    this.intersects = function(box) {
+        if(this.getRight() >= box.getLeft() 
+        && this.getLeft() <= box.getRight()) {
+            if(this.getBottom() >= box.getTop() 
+            && this.getTop() <= box.getBottom()) {
+                    return true;
+            }
+  		}	
+  		return false;    	
+    }
+}
+
+function rand(lo,hi) {
+    return lo + Math.random()*(hi-lo);
+}
+
+function randColor() {
+    return '#'+Math.floor(Math.random()*16777215).toString(16);
+}
+
+function ParticleEffect() {
+    this.x = 0;
+    this.y = 0;
+    this.age = 0;
+    this.parts = [];
+    this.rate = 1;
+    this.max = 10;
+    this.maxage = 200;
+    this.color = "#aaaaaa";
+    this.alive = true;
+    this.initParticle = function(part) {
+        return part;
+    }
+    this.tick = function() {
+        this.age++;
+        if(this.age > this.maxage) {
+            this.alive = false;
+            return;
+        }
+        if((this.age % this.rate) == 0 && this.parts.length < this.max) {
+            var part = {
+                x:this.x,
+                y:this.y,
+                dx: rand(-3,3),
+                dy: rand(-3,3),
+                alpha:1,
+                dalpha:-0.01,
+                color: this.color,
+                };
+            this.parts.push(this.initParticle(part));
+        }
+        for(var i=0; i<this.parts.length; i++) {
+            var p = this.parts[i];
+            p.y += p.dy;
+            p.x += p.dx;
+            p.alpha += p.dalpha;
+        }
+    }
+    this.draw = function(g) {
+        if(!this.alive) return;
+        g.save();
+        for(var i=0; i<this.parts.length; i++) {
+            var p = this.parts[i];
+            if(p.alpha < 0) continue;
+            g.fillStyle = p.color;
+            g.globalAlpha = p.alpha;
+            g.fillRect(p.x,p.y,20,20);
+        }
+        g.restore();
+    }
+}
+
+setup();
+
+var sin = Math.sin;
+var PI = Math.PI;
+var floor = Math.floor;
+var noise = Math.random;
+var scale = {
+    C4:261.626,
+    D4:293.665,
+    E4:329.628,
+    F4:349.228,
+    G4:391.995,
+    A4:440.000,
+    B4:493.883,    
+}
+
+var notes = [
+    scale.E4, scale.D4, scale.E4, scale.F4, 
+    scale.E4, scale.D4, scale.E4, scale.F4, 
+    scale.G4, scale.F4, scale.G4, scale.A4, 
+    scale.G4, scale.F4, scale.G4, scale.A4, 
+    
+    scale.E4, scale.D4, scale.E4, scale.F4, 
+    scale.E4, scale.D4, scale.E4, scale.F4, 
+    scale.G4, scale.F4, scale.G4, scale.A4, 
+    scale.G4, scale.F4, scale.G4, scale.A4, 
+
+    scale.B4, scale.B4, scale.A4, scale.A4, 
+    scale.G4, scale.G4, scale.F4, scale.F4,
+    scale.E4, scale.E4, scale.D4, scale.D4,
+    scale.C4, scale.C4, scale.C4, scale.C4,
+    ];
+
+var noteLen = 0.2;
+function note(t) {
+    var cur = (floor(t/noteLen) % notes.length);
+    return notes[cur];
+}
+function tone(t,freq) { 
+    return sin(t*2*PI*freq);
+}
+function tone2(t,freq) { 
+    return Math.abs(sin(t*2*PI*freq));
+}
+function lerp(t, lo, hi) { return (hi-lo)*t + lo; }
+
+function adsr(t, a, d, s, r, al, sl) {
+    if(t < a) return lerp(t/a,0,al);
+    t-=a;
+    if(t < d) return lerp(t/d,al,sl);
+    t-=d;
+    if(t < s) return sl;
+    t-=s;
+    if(t < r) return lerp(t/r,sl,0);
+    return 0;
+}
+
+
+function envelope(t) {
+    return adsr(t, 0.01, 0.2, 0.5, 0.1,  0.76, 0.3);
+}
+function music(t) {
+    var ti = floor(t/noteLen)*noteLen;
+    var t2 = (t-ti)/noteLen;
+    
+    var freq = note(t);
+    var ton = (tone2(t, freq/2)+tone(t,freq*1.2)+tone2(t,freq*1.5/2.0))/3;
+    var env = envelope(t2);
+    return ton*env;
+}
+
+var jumpt = 0;
+function jumpsound(t) {
+    if(player.getBottom() >= ground) {
+        jumpt = 0;
+        return 0;
+    }
+    jumpt += 1/44000.0;
+    var freq = 260*(1+jumpt);
+    return sin(jumpt*2*PI*freq)/2;
+}
+
+var score = [
+    {
+        freq:100,
+        env: {attack:0.001, decay: 0.1, release: 0.2, level: 0.8},
+        noise: 0.01,
+    },
+    {
+        freq:100,
+        env: {attack:0.001, decay: 0.1, release: 0.2, level: 0.8},
+        noise: 0.01,
+    },
+    {
+        freq:100,
+        env: {attack:0.001, decay: 0.1, release: 0.2, level: 0.5},
+        noise: 0.2,
+    },
+    {
+        freq:1,
+        env: {attack:0.001, decay: 0.1, release: 0.2, level: 0.8},
+        noise: 0.0,
+    },
+];
+
+function drum(t) {
+    var nl = noteLen*1;
+    var ti = floor(t/nl)*nl;
+    var t2 = (t-ti)/nl;
+    var cur = (floor(t/nl) % score.length);
+    
+    var note = score[cur];
+    var freq = note.freq;
+    var lev = noise()*note.noise + 1-note.noise;
+    var a = note.env.attack;
+    var d = note.env.decay;
+    var r = note.env.release;
+    var s = 1.0-a-d-r;
+    var al = 1.0;
+    var sl = note.env.level;
+    var env = adsr(t2,   a, d, s, r, al,sl);
+    var ton = tone(t,freq);
+    return ton*env*lev;
+}
+
+var actx;
+var jsnode;
+if(webkitAudioContext) {
+    actx = new webkitAudioContext();
+    if(actx.createScriptProcessor) {
+        jsnode = actx.createScriptProcessor(512,0,1);
+        var t = 0;
+        jsnode.onaudioprocess = function(e) {
+            var output = e.outputBuffer.getChannelData(0);
+            for (var i = 0; i < output.length; i++) {
+                output[i] = (music(t)+jumpsound(t)+drum(t))/3;
+                t += 1/44000.0;
+            }
+        }
+        jsnode.connect(actx.destination);
+    }
+}
+
+
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          function( callback ){
+            window.setTimeout(callback, 1000 / 60);
+          };
+})();
+
+window.requestAnimFrame(gameLoop);
+
+</script></body></html>

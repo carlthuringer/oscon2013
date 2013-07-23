@@ -1,0 +1,23 @@
+<html>
+<body>
+<script type='text/javascript'>
+var sin = Math.sin;
+var ctx = new webkitAudioContext();
+var jsnode = ctx.createScriptProcessor(512,0,1);
+var t = 0;
+jsnode.onaudioprocess = function(e) {
+    var output = e.outputBuffer.getChannelData(0);
+    for (var i = 0; i < output.length; i++) {
+        output[i] = sin(t);
+//        output[i] = sin(t/2);
+//        output[i] = sin(t*2);
+//        output[i] = sin(t*1.3);
+//        output[i] = (sin(t)+sin(t*1.2))/2;
+        output[i] = (sin(t)+sin(t*1.01))/2;
+        t += 0.05;
+    }
+}
+jsnode.connect(ctx.destination);
+</script>
+</body>
+</html>

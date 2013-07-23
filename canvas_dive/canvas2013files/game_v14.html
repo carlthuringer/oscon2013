@@ -1,0 +1,382 @@
+<html>
+<body>
+<canvas id='canvas' width='800' height='600'></canvas>
+<script type='text/javascript'>
+var pressed = {};
+var player = new Box(0,300,50,100);
+var ctx = document.getElementById('canvas').getContext('2d');
+var monolith = new Box(300,200,50,200);
+var effects = [];
+var ground = 400;
+var sprite = new Image();
+sprite.src = "kitty.png";
+var camera = 0;
+
+var catAnim = {};
+
+var skyline1 = [];
+for(var i=0; i<100; i++) {
+    skyline1[i] = rand(50,200);
+}
+
+function setup() {
+    document.addEventListener('keydown',function(e) { 
+        pressed[e.keyCode] = true;   
+    });
+    document.addEventListener('keyup',  function(e) {  
+        pressed[e.keyCode] = false;  
+    });
+    player.dy = 0;
+    
+    catAnim.idle = [];
+    for(var i=0; i<4; i++) {
+        catAnim.idle.push({x:i*64, y:0});
+    }
+    catAnim.walking = [];
+    for(var i=0; i<8; i++) {
+        catAnim.walking.push({x:i*64, y:64});
+    }
+    catAnim.jumping = [];
+    for(var i=0; i<8; i++) {
+        catAnim.jumping.push({x:i*64, y:128});
+    }
+    
+    catAnim.index = 0;
+    catAnim.name = "idle";
+}
+
+function gameLoop() {
+    processInput();
+    updateGameState();
+    checkConditions();
+    processAnimations();
+    draw();
+    window.requestAnimFrame(gameLoop);
+}
+function processInput() {
+}
+
+var jumping = false;
+function updateGameState() {
+    catAnim.name = "idle";
+    if(pressed['J'.charCodeAt(0)] == true) {
+        player.x -= 4;
+        catAnim.name = "walking";
+    }
+    if(pressed['L'.charCodeAt(0)] == true) {
+        player.x += 4;
+        catAnim.name = "walking";
+    }
+    if(pressed[' '.charCodeAt(0)] == true) {
+        if(!jumping) {
+            player.dy -= 30;
+            jumping = true;
+        }
+    } else {
+        jumping = false;
+    }
+    
+    player.y += player.dy;
+    player.dy += 1;
+    
+    camera = player.x - 200;
+}
+
+function checkConditions() {
+    if(player.intersects(monolith)) {
+        console.log("player hit the monolith.");
+        
+        var effect = new ParticleEffect();
+        effect.x = player.x;
+        effect.y = 400-player.h/2;
+        effect.max = 100;
+        effect.initParticle = function(part) {
+            part.dy = rand(-5,5);
+            part.dx = rand(-3,0);
+            part.color = randColor();
+            return part;
+        };
+        effects.push(effect);
+        player.x = 0;
+    }
+    
+    if(player.getBottom() > ground) {
+        player.dy = 0;
+        player.setBottom(ground);
+    }
+}
+
+var tick = 0;
+function processAnimations() {
+    if(player.getBottom() < ground) {
+        catAnim.name = "jumping";
+    }    
+
+
+    tick++;
+    if(tick % 6 == 0) {
+        catAnim.index++;
+    }
+    if(catAnim.index >= catAnim[catAnim.name].length) {
+        catAnim.index = 0;
+    }
+}
+
+function draw() {
+    drawBackground(ctx);
+    drawSkyline(ctx);
+    drawGround(ctx);
+    ctx.save();
+    ctx.translate(-camera,0);
+    drawPlayer(ctx);
+    drawMonoliths(ctx);
+    drawEffects(ctx);
+    ctx.restore();
+}
+function drawBackground(ctx) {
+    //background / sky
+    ctx.fillStyle = "#202020";
+    ctx.fillRect(0,0,800,600);
+}
+
+function drawSkyline(ctx) {
+    ctx.save();
+    ctx.translate(-camera/2, 0);
+    ctx.fillStyle = "#442222";
+    for(var i in skyline1) {
+        var h = skyline1[i];
+        ctx.fillRect(i*50, ground - h, 51, h);
+    }
+    
+    ctx.restore();
+}
+function drawGround(ctx) {
+    ctx.fillStyle = "#449922";
+    ctx.fillRect(0,400,800,200);
+}
+function drawPlayer(ctx) {
+    //player
+    ctx.fillStyle = "red";
+    //player.fillRect(ctx);
+    
+    ctx.save();
+	ctx.translate(player.x,player.y);
+    var slice = catAnim[catAnim.name][catAnim.index];
+    ctx.imageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+	ctx.drawImage(sprite,
+	    slice.x,slice.y,64,64, //src
+	    -64-32,-64-32-20,128*2,128*2 //dst
+	    );
+   
+	ctx.restore();
+    
+    //monolith
+}
+function drawMonoliths(ctx) {
+    ctx.fillStyle = "#f0f0f0";
+    monolith.fillRect(ctx);
+}
+function drawEffects(ctx) {
+    //effects    
+    effects.forEach(function(ef) {
+        ef.tick();
+        ef.draw(ctx);
+    });
+}
+function refresh() {
+}
+
+
+
+
+function Box(x,y,w,h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.fillRect = function(ctx) {
+        ctx.fillRect(this.x,this.y,this.w,this.h);
+    }
+    this.getRight = function() { return this.x + this.w; }
+    this.getLeft = function() { return this.x; }
+    this.getTop = function() { return this.y; }
+    this.getBottom = function() { return this.y + this.h; }
+    
+    this.setRight  = function(right) { this.x = right - this.w; }
+    this.setLeft   = function(left)  { this.x = left; }
+    this.setBottom = function(bottom) { this.y = bottom - this.h; }
+    this.setTop    = function(top) { this.y = top; }
+    
+    this.intersects = function(box) {
+        if(this.getRight() >= box.getLeft() 
+        && this.getLeft() <= box.getRight()) {
+            if(this.getBottom() >= box.getTop() 
+            && this.getTop() <= box.getBottom()) {
+                    return true;
+            }
+  		}	
+  		return false;    	
+    }
+}
+
+function rand(lo,hi) {
+    return lo + Math.random()*(hi-lo);
+}
+
+function randColor() {
+    return '#'+Math.floor(Math.random()*16777215).toString(16);
+}
+
+function ParticleEffect() {
+    this.x = 0;
+    this.y = 0;
+    this.age = 0;
+    this.parts = [];
+    this.rate = 1;
+    this.max = 10;
+    this.maxage = 200;
+    this.color = "#aaaaaa";
+    this.alive = true;
+    this.initParticle = function(part) {
+        return part;
+    }
+    this.tick = function() {
+        this.age++;
+        if(this.age > this.maxage) {
+            this.alive = false;
+            return;
+        }
+        if((this.age % this.rate) == 0 && this.parts.length < this.max) {
+            var part = {
+                x:this.x,
+                y:this.y,
+                dx: rand(-3,3),
+                dy: rand(-3,3),
+                alpha:1,
+                dalpha:-0.01,
+                color: this.color,
+                };
+            this.parts.push(this.initParticle(part));
+        }
+        for(var i=0; i<this.parts.length; i++) {
+            var p = this.parts[i];
+            p.y += p.dy;
+            p.x += p.dx;
+            p.alpha += p.dalpha;
+        }
+    }
+    this.draw = function(g) {
+        if(!this.alive) return;
+        g.save();
+        for(var i=0; i<this.parts.length; i++) {
+            var p = this.parts[i];
+            if(p.alpha < 0) continue;
+            g.fillStyle = p.color;
+            g.globalAlpha = p.alpha;
+            g.fillRect(p.x,p.y,20,20);
+        }
+        g.restore();
+    }
+}
+
+setup();
+
+var sin = Math.sin;
+var PI = Math.PI;
+var floor = Math.floor;
+var scale = {
+    C4:261.626,
+    D4:293.665,
+    E4:329.628,
+    F4:349.228,
+    G4:391.995,
+    A4:440.000,
+    B4:493.883,    
+}
+var notes = [scale.E4, scale.D4, scale.E4, scale.F4];
+
+var noteLen = 0.2;
+function note(t) {
+    var cur = (floor(t/noteLen) % notes.length);
+    return notes[cur];
+}
+function tone(t,freq) { 
+    return sin(t*2*PI*freq);
+}
+function lerp(t, lo, hi) { return (hi-lo)*t + lo; }
+
+function adsr(t, a, d, s, r, al, sl) {
+    if(t < a) return lerp(t/a,0,al);
+    t-=a;
+    if(t < d) return lerp(t/d,al,sl);
+    t-=d;
+    if(t < s) return sl;
+    t-=s;
+    if(t < r) return lerp(t/r,sl,0);
+    return 0;
+}
+function envelope(t) {
+    return adsr(t, 0.18, 0.15, 0.48, 0.19, 0.76, 0.08);
+}
+function music(t) {
+    var ti = floor(t/noteLen)*noteLen;
+    var t2 = (t-ti)/noteLen;
+    
+    var freq = note(t);
+    var ton = tone(t, freq);
+    var env = envelope(t2);
+    return ton*env;
+}
+
+var jumpt = 0;
+function jumpsound(t) {
+    if(player.getBottom() >= ground) {
+        jumpt = 0;
+        return 0;
+    }
+    jumpt += 1/44000.0;
+    var freq = 260*(1+jumpt);
+    return sin(jumpt*2*PI*freq);
+}
+
+function drum(t) {
+    var ti = floor(t/noteLen)*noteLen;
+    var t2 = (t-ti)/noteLen;
+    if(t2 < 0.9) return 0;
+    return Math.random();
+}
+
+var actx;
+var jsnode;
+if(webkitAudioContext) {
+actx = new webkitAudioContext();
+jsnode = actx.createScriptProcessor(512,0,1);
+var t = 0;
+jsnode.onaudioprocess = function(e) {
+    var output = e.outputBuffer.getChannelData(0);
+    for (var i = 0; i < output.length; i++) {
+        output[i] = (music(t)+jumpsound(t)+drum(t)/5)/3;
+        t += 1/44000.0;
+    }
+}
+jsnode.connect(actx.destination);
+}
+
+
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          function( callback ){
+            window.setTimeout(callback, 1000 / 60);
+          };
+})();
+
+window.requestAnimFrame(gameLoop);
+
+</script>
+
+</body>
+</html>

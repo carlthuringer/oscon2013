@@ -1,0 +1,185 @@
+<html>
+<body>
+<canvas id='canvas' width='800' height='600'></canvas>
+<script type='text/javascript'>
+var pressed = {};
+var player = new Box(0,300,50,100);
+var ctx = document.getElementById('canvas').getContext('2d');
+var monolith = new Box(300,200,50,200);
+var effects = [];
+function setup() {
+    document.addEventListener('keydown',function(e) { 
+        pressed[e.keyCode] = true;   
+    });
+    document.addEventListener('keyup',  function(e) {  
+        pressed[e.keyCode] = false;  
+    });
+}
+
+function gameLoop() {
+    processInput();
+    updateGameState();
+    checkConditions();
+    processAnimations();
+    draw();
+    window.requestAnimFrame(gameLoop);
+}
+function processInput() {
+}
+
+
+function updateGameState() {
+    if(pressed['J'.charCodeAt(0)] == true) {
+        player.x -= 4;
+    }
+    if(pressed['L'.charCodeAt(0)] == true) {
+        player.x += 4;
+    }
+}
+
+function checkConditions() {
+    if(player.intersects(monolith)) {
+        console.log("player hit the monolith.");
+        
+        var effect = new ParticleEffect();
+        effect.x = player.x;
+        effect.y = 400;
+        effects.push(effect);
+        player.x = 0;
+    }
+}
+
+function processAnimations() {
+}
+
+function draw() {
+    //background / sky
+    ctx.fillStyle = "#88ddff";
+    ctx.fillRect(0,0,800,600);
+    
+    //ground
+    ctx.fillStyle = "#88ff00";
+    ctx.fillRect(0,400,800,200);
+    
+    //player
+    ctx.fillStyle = "red";
+    player.fillRect(ctx);
+    
+    //monolith
+    ctx.fillStyle = "black";
+    monolith.fillRect(ctx);
+    
+    //effects    
+    effects.forEach(function(ef) {
+        ef.tick();
+        ef.draw(ctx);
+    });
+}
+function refresh() {
+}
+
+
+
+
+function Box(x,y,w,h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.fillRect = function(ctx) {
+        ctx.fillRect(this.x,this.y,this.w,this.h);
+    }
+    this.getRight = function() { return this.x + this.w; }
+    this.getLeft = function() { return this.x; }
+    this.getTop = function() { return this.y; }
+    this.getBottom = function() { return this.y + this.h; }
+    
+    this.setRight  = function(right) { this.x = right - this.w; }
+    this.setLeft   = function(left)  { this.x = left; }
+    this.setBottom = function(bottom) { this.y = bottom - this.h; }
+    this.setTop    = function(top) { this.y = top; }
+    
+    this.intersects = function(box) {
+        if(this.getRight() >= box.getLeft() 
+        && this.getLeft() <= box.getRight()) {
+            if(this.getBottom() >= box.getTop() 
+            && this.getTop() <= box.getBottom()) {
+                    return true;
+            }
+  		}	
+  		return false;    	
+    }
+}
+
+function rand(lo,hi) {
+    return lo + Math.random()*(hi-lo);
+}
+
+function ParticleEffect() {
+    this.x = 0;
+    this.y = 0;
+    this.age = 0;
+    this.parts = [];
+    this.rate = 1;
+    this.max = 10;
+    this.maxage = 200;
+    this.color = "#aaaaaa";
+    this.alive = true;
+    this.initParticle = function(part) {
+        return part;
+    }
+    this.tick = function() {
+        this.age++;
+        if(this.age > this.maxage) {
+            this.alive = false;
+            return;
+        }
+        if((this.age % this.rate) == 0 && this.parts.length < this.max) {
+            var part = {
+                x:this.x,
+                y:this.y,
+                dx: rand(-3,3),
+                dy: rand(-3,3),
+                alpha:1,
+                dalpha:-0.01,
+                };
+            this.parts.push(this.initParticle(part));
+        }
+        for(var i=0; i<this.parts.length; i++) {
+            var p = this.parts[i];
+            p.y += p.dy;
+            p.x += p.dx;
+            p.alpha += p.dalpha;
+        }
+    }
+    this.draw = function(g) {
+        if(!this.alive) return;
+        g.save();
+        g.fillStyle = this.color;
+        for(var i=0; i<this.parts.length; i++) {
+            var p = this.parts[i];
+            if(p.alpha < 0) continue;
+            g.globalAlpha = p.alpha;
+            g.fillRect(p.x,p.y,20,20);
+        }
+        g.restore();
+    }
+}
+
+setup();
+
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       ||
+          window.webkitRequestAnimationFrame ||
+          window.mozRequestAnimationFrame    ||
+          function( callback ){
+            window.setTimeout(callback, 1000 / 60);
+          };
+})();
+
+window.requestAnimFrame(gameLoop);
+
+</script>
+
+</body>
+</html>
