@@ -1,5 +1,5 @@
 ( function() {
-  var pressed,
+  var pressed = {},
   player,
   ctx,
   monolith,
@@ -7,7 +7,15 @@
   ground,
   KEY_SPACEBAR,
   catSprite,
-  tick;
+  tick,
+  keyMap;
+
+  keyMap = {
+    space: 32,
+    j: 74,
+    l: 76
+  }
+
 
   function Box(x,y,w,h) {
     this.x = x;
@@ -21,8 +29,8 @@
   Box.prototype.getRight = function() { return this.x + this.w; };
   Box.prototype.getLeft = function() { return this.x; };
   Box.prototype.getTop = function() { return this.y; };
-  Box.prototype.getBottom = function() { 
-    return this.y + this.h; 
+  Box.prototype.getBottom = function() {
+    return this.y + this.h;
   };
 
   Box.prototype.setRight  = function(right) { this.x = right - this.w; };
@@ -35,22 +43,28 @@
       if(this.getBottom() >= box.getTop() && this.getTop() <= box.getBottom()) {
         return true;
       }
-    }	
-    return false;    	
+    }
+    return false;
   };
 
   function Player() {
     this.constructor.apply(this, arguments);
     this.dx = 0;
     this.dy = 0;
-    this.maxDY = 3;
+    this.jumpStrength = 3;
+    this.runSpeed = 3;
   }
   Player.prototype = new Box();
   Player.prototype.constructor = Box;
 
-  function createSprite(source, offsetX, offsetY) {
+  Player.prototype.jump = function() { this.dy === 0 ? this.dy = this.jumpStrength : null; }
+  Player.prototype.goLeft = function() { this.dx = -this.runSpeed; }
+  Player.prototype.goRight = function() { this.dx = this.runSpeed; }
+
+  function createSprite(source, offsetX, offsetY, options) {
     var image = new Image();
     image.src = source;
+    incrementer = 
     image.addAnimation = function(name, startPosY, frameCount) {
       this[name] = []
       for(var _i = 0; _i < frameCount; _i++) {
@@ -67,13 +81,12 @@
     catSprite = createSprite("images/kitty.png", 0, 7);
     catSprite.addAnimation('idle', 0, 4);
     catSprite.addAnimation('walk', 1, 8);
+    catSprite.addAnimation('walkBack', 1, 8, { reverse: true });
     catSprite.addAnimation('jumping', 2, 8);
 
     player = new Player(0,300,50,100);
     monolith = new Box(300,200,50,200);
 
-    pressed = {};
-    
     ctx = document.getElementById('canvas').getContext('2d');
 
     effects = [];
@@ -81,16 +94,15 @@
     KEY_SPACEBAR = 32;
     tick = 0;
 
-    document.addEventListener('keydown',function(e) { 
-      pressed[e.keyCode] = true;   
+    document.addEventListener('keydown',function(e) {
+      console.log(e.keyCode);
+      pressed[e.keyCode] = true;
     });
-    document.addEventListener('keyup',  function(e) {  
-      pressed[e.keyCode] = false;  
+    document.addEventListener('keyup',  function(e) {
+      pressed[e.keyCode] = false;
     });
   }
 
-  function setupAnimation() {
-  }
   function gameLoop() {
     processInput();
     updateGameState();
@@ -101,25 +113,20 @@
   }
 
   function processInput() {
+    if(pressed[keyMap.space]) player.jump();
+    if(pressed[keyMap.j]) player.goLeft();
+    if(pressed[keyMap.l]) player.goRight();
   }
 
 
   function updateGameState() {
-    if(pressed[KEY_SPACEBAR] == true) {
-      player.dy = Math.min(player.y + 1, player.maxDY);
-    }
-    if(pressed['J'.charCodeAt(0)] == true) {
-      player.x -= 4;
-    }
-    if(pressed['L'.charCodeAt(0)] == true) {
-      player.x += 4;
-    }
-
     player.y -= player.dy;
     player.dy -= 0.1;
+    player.x += player.dx;
+    player.dx = Math.abs(player.dx) * 0.5;
 
-    if(player.y + player.h > ground) {
-      player.y = ground - player.h;
+    if(player.getBottom() > ground) {
+      player.setBottom(ground);
       player.dy = 0;
     }
   }
@@ -186,8 +193,6 @@
 
                   ctx.fillStyle = "black";
                   monolith.fillRect(ctx);
-
-                  //effects    
 
                   effects.forEach(function(ef) {
                     ef.tick();
